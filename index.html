@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cura1525 펌웨어 업데이트</title>
+<style>
+/* ── 회사 톤: 흰 바탕 + 하늘색 (양산 webflash와 통일) — fw-flash.html 디자인 이식 ── */
+:root{
+  --bg:#eef5fb; --card:#ffffff; --line:#d8e6f2;
+  --ink:#1f3864; --sub:#6b7c90;
+  --sky:#2f9fe0; --sky-d:#1b7fb8; --sky-l:#e8f4fd;
+  --ok:#1e9e56; --fail:#d64545;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+     font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;
+     display:flex;justify-content:center;padding:28px 20px}
+.panel{width:100%;max-width:620px;background:var(--card);border:1px solid var(--line);
+       border-radius:16px;padding:0 28px 26px;box-shadow:0 2px 14px rgba(31,56,100,.07)}
+.top{display:flex;align-items:center;gap:12px;padding:20px 0 16px;border-bottom:3px solid var(--sky);margin-bottom:18px}
+h1{font-size:22px;margin:0;font-weight:700;letter-spacing:-.3px}
+.ver{font-size:12px;font-weight:600;color:var(--sky-d);background:var(--sky-l);
+     border:1px solid #bfdff5;border-radius:20px;padding:3px 10px;margin-left:8px;vertical-align:3px}
+.brand{margin-left:auto;font-size:19px;font-weight:800;color:var(--sky-d);letter-spacing:1.5px}
+.sub{color:var(--sub);font-size:15px;margin:0 0 18px}
+
+.field{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+label{font-size:14px;color:var(--sub);font-weight:600}
+select{flex:1;background:#fff;color:var(--ink);border:1.5px solid var(--line);border-radius:10px;
+       padding:13px 12px;font-size:16px;font-family:inherit}
+select:focus{outline:none;border-color:var(--sky)}
+button{font-family:inherit;font-weight:700;border:0;border-radius:10px;cursor:pointer;transition:.15s}
+.lblrow{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.chips{display:flex;gap:6px;margin-left:auto}
+.chip{background:#fff;color:var(--sub);border:1.5px solid var(--line);border-radius:20px;padding:5px 15px;font-size:13px}
+.chip:hover{border-color:var(--sky);color:var(--sky-d)}
+.chip.cur{background:var(--sky);color:#fff;border-color:var(--sky)}
+
+.dev{font-size:13px;color:var(--sub);background:var(--sky-l);border:1px solid #bfdff5;
+     border-radius:10px;padding:10px 13px;margin-bottom:16px;line-height:1.5}
+.dev b{color:var(--ink);font-weight:700}
+.dev div+div{margin-top:3px}
+
+.actions{display:flex;align-items:center;gap:12px;margin-top:6px;flex-wrap:wrap}
+.sel{background:#fff;color:var(--ink);border:1.5px solid var(--line);padding:14px 22px;font-size:16px}
+.sel:hover{border-color:var(--sky);color:var(--sky-d)}
+.sel.on{background:var(--sky-l);color:var(--sky-d);border-color:var(--sky)}
+.go{background:var(--sky);color:#fff;padding:15px 34px;font-size:18px;box-shadow:0 2px 8px rgba(47,159,224,.3)}
+.go:hover:not(:disabled){background:var(--sky-d)}
+.go:disabled{opacity:.4;cursor:default;box-shadow:none}
+.status{font-size:16px;font-weight:700}
+.status.ok{color:var(--ok)}.status.fail{color:var(--fail)}.status.busy{color:var(--sky-d)}
+.meta{font-size:13px;color:var(--sub);margin-left:auto}
+
+.pbw{margin-top:18px;display:block}
+.ph{display:flex;justify-content:space-between;font-size:14px;color:var(--ink);font-weight:600;margin-bottom:8px}
+.track{height:16px;background:#e9eff5;border-radius:99px;overflow:hidden}
+.fill{height:100%;width:0;background:var(--sky);border-radius:99px;transition:width .3s}
+.fill.ok{background:var(--ok)}.fill.fail{background:var(--fail)}
+
+details{margin-top:14px}
+summary{font-size:13px;color:var(--sub);cursor:pointer;user-select:none}
+pre{margin:10px 0 0;background:#f7fafd;border:1px solid var(--line);border-radius:10px;padding:12px;
+    font-family:Consolas,monospace;font-size:12.5px;color:#4a5a6e;height:130px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+.warn{display:none;background:#fdecec;border:1px solid #f3c2c2;border-radius:10px;
+      padding:11px 14px;font-size:13.5px;color:#b03434;margin-bottom:14px;line-height:1.5}
+.warn.show{display:block}
+.hint{font-size:12px;color:var(--sub);margin-top:2px}
+</style></head><body>
+<!-- ★비밀번호 게이트 (비번·ON/OFF는 config.js 에서 관리) -->
+<div id="gate" style="position:fixed;inset:0;z-index:9999;background:#f4f8fb;display:flex;align-items:center;justify-content:center">
+  <div style="background:#fff;border:1.5px solid #cfe0ee;border-radius:14px;padding:28px 26px;max-width:340px;width:86%;box-shadow:0 6px 24px rgba(0,0,0,.08);text-align:center">
+    <div style="font-size:18px;font-weight:700;color:#1a3b57;margin-bottom:4px">CURA 펌웨어 업데이트</div>
+    <div id="gmsg" style="font-size:13px;color:#5b7189;margin-bottom:16px">비밀번호를 입력하세요</div>
+    <input id="gpw" type="password" autocomplete="off" placeholder="비밀번호"
+      style="width:100%;box-sizing:border-box;padding:11px 12px;border:1.5px solid #cfe0ee;border-radius:10px;font-size:15px;margin-bottom:10px">
+    <button id="gbtn" type="button"
+      style="width:100%;padding:11px;border:0;border-radius:10px;background:#2f8fd6;color:#fff;font-size:15px;font-weight:600;cursor:pointer">확인</button>
+    <div id="gerr" style="font-size:12.5px;color:#c0392b;margin-top:10px;min-height:16px"></div>
+  </div>
+</div>
+<div class="panel">
+<div class="top">
+  <h1>cura1525 펌웨어 업데이트<span class="ver">v2.0</span></h1>
+  <div class="brand">CURACO</div>
+</div>
+<p class="sub">이 PC에 연결된 제품에 펌웨어를 설치합니다. <span style="color:var(--sky-d)">(포트는 이 PC에서 직접 선택)</span></p>
+<div class="warn" id="warn"></div>
+
+<div class="field">
+  <div class="lblrow">
+    <label>펌웨어</label>
+    <div class="chips">
+      <button class="chip cur" id="chipMain" type="button">본체</button>
+      <button class="chip" id="chipWear" type="button">신체착용부</button>
+    </div>
+  </div>
+  <select id="fw"><option value="">불러오는 중…</option></select>
+  <div class="hint" id="wearHint" style="display:none">신체착용부는 컵 보드 UART에 USB-시리얼을 직접 연결하세요.</div>
+  <div class="hint" id="blcompat" style="display:none"></div>
+</div>
+
+<div class="actions">
+  <button class="sel" id="selPort" type="button">① 포트 선택</button>
+  <button class="go" id="go" type="button" disabled>② 시작</button>
+  <span class="status" id="status"></span>
+  <span class="meta" id="fwmeta"></span>
+</div>
+
+<div class="dev" id="dev">
+  <div>날짜 <b id="dvDate"></b></div>
+  <div>ID <b id="dvUid"></b> · 부트로더 <b id="dvBl"></b> · 펌웨어 <b id="dvFw"></b></div>
+</div>
+
+<div class="pbw" id="prog">
+  <div class="ph"><span id="phase">준비</span><span id="pct">0%</span></div>
+  <div class="track"><div class="fill" id="fill"></div></div>
+</div>
+
+<details id="logwrap" hidden>
+  <summary>자세히 보기</summary>
+  <pre id="log"></pre>
+</details>
+</div>
+
+<script src="config.js"></script>
+<script>
+/* ★비밀번호 게이트 로직 (config.js 의 ENABLED·PASSWORD_SHA256 사용) */
+(function(){
+  var C = window.SITE_CONFIG || { ENABLED:true, PASSWORD_SHA256:"" };
+  var gate=document.getElementById('gate'), msg=document.getElementById('gmsg'),
+      pw=document.getElementById('gpw'), btn=document.getElementById('gbtn'), err=document.getElementById('gerr');
+  function unlock(){ try{ sessionStorage.setItem('cura_ok','1'); }catch(e){} gate.style.display='none'; }
+  if(C.ENABLED===false){ pw.style.display='none'; btn.style.display='none';
+    msg.innerHTML='현재 <b>잠금(중지)</b> 상태입니다.'; return; }              /* 링크 OFF */
+  try{ if(sessionStorage.getItem('cura_ok')==='1'){ gate.style.display='none'; } }catch(e){}
+  async function sha256(s){ var b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+    return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,'0');}).join(''); }
+  async function check(){ err.textContent='';
+    var h=await sha256(pw.value||'');
+    if(h===String(C.PASSWORD_SHA256||'').toLowerCase()){ unlock(); }
+    else { err.textContent='비밀번호가 틀렸습니다.'; pw.value=''; pw.focus(); } }
+  if(btn){ btn.addEventListener('click', check); }
+  if(pw){ pw.addEventListener('keydown', function(e){ if(e.key==='Enter'){ check(); } }); pw.focus(); }
+})();
+</script>
+<script>
+const $=id=>document.getElementById(id);
+function h(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function kb(n){ return (n/1024).toFixed(1)+' KB'; }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+// ── Web Serial 지원 체크 (https 또는 localhost 필요) ──
+if(!('serial' in navigator)){
+  const w=$('warn'); w.classList.add('show');
+  w.innerHTML='이 브라우저는 <b>Web Serial</b>을 지원하지 않거나 보안 컨텍스트가 아닙니다.<br>→ <b>크롬/엣지</b>로, 반드시 <b>https://</b> 주소로 여세요.';
+}
+
+// ============================================================
+// CURA-BL 프로토콜 (upload.py 이식) — 로컬 포트(navigator.serial)로 직접 통신
+//   프레임: SOF(0x7E)|CMD(1)|LEN(2,LE)|PAYLOAD|CRC16(2,LE). CRC=[CMD,LEN,PAYLOAD].
+// ============================================================
+const SOF=0x7E;
+const CMD_CONNECT=0x01, CMD_BEGIN=0x02, CMD_DATA=0x03, CMD_END=0x04, CMD_GO=0x05;
+const RESP_ACK=0x80, RESP_NAK=0x81;
+const ALIGN=16, CHUNK=1024;
+const ERR_NAMES={0x00:"NONE",0x01:"프레임 CRC 불일치",0x02:"알 수 없는 명령",0x03:"payload 길이",0x04:"범위/정렬",0x05:"소거 실패",0x06:"쓰기 실패",0x07:"검증(CRC) 불일치",0x08:"메타 실패",0x09:"절차 오류"};
+function crc16(d){ let c=0xFFFF; for(const b of d){ c^=(b<<8); for(let i=0;i<8;i++) c=(c&0x8000)?(((c<<1)^0x1021)&0xFFFF):((c<<1)&0xFFFF);} return c&0xFFFF; }
+const CRC32_TAB=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); t[n]=c>>>0;} return t;})();
+function crc32(d){ let c=0xFFFFFFFF; for(const b of d) c=CRC32_TAB[(c^b)&0xFF]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function u32le(v){ return [v&0xFF,(v>>>8)&0xFF,(v>>>16)&0xFF,(v>>>24)&0xFF]; }
+function rdU32le(b,o){ return (b[o]|(b[o+1]<<8)|(b[o+2]<<16)|(b[o+3]<<24))>>>0; }
+function hex2(v){ return v.toString(16).padStart(2,'0').toUpperCase(); }
+function hex8(v){ return (v>>>0).toString(16).padStart(8,'0').toUpperCase(); }
+function buildFrame(cmd,payload){ payload=payload||[]; const len=payload.length; const body=new Uint8Array(3+len);
+  body[0]=cmd; body[1]=len&0xFF; body[2]=(len>>8)&0xFF; body.set(payload,3);
+  const crc=crc16(body); const f=new Uint8Array(1+3+len+2); f[0]=SOF; f.set(body,1); f[1+3+len]=crc&0xFF; f[1+3+len+1]=(crc>>8)&0xFF; return f; }
+class ProtoError extends Error{}
+let rx=[], reader=null, writer=null, readerActive=false;
+async function pump(){ readerActive=true; try{ while(readerActive){ const {value,done}=await reader.read(); if(done)break; if(value) for(const b of value) rx.push(b);} }catch(e){} }
+async function readByte(t){ const end=performance.now()+t; while(performance.now()<end){ if(rx.length) return rx.shift(); await sleep(2);} return null; }
+async function readN(n,t){ const end=performance.now()+t,o=[]; while(o.length<n && performance.now()<end){ if(rx.length) o.push(rx.shift()); else await sleep(2);} return o; }
+async function wr(a){ await writer.write(a instanceof Uint8Array?a:new Uint8Array(a)); }
+async function recvFrame(timeout){
+  const dl=performance.now()+timeout;
+  for(;;){ const rem=dl-performance.now(); if(rem<=0) throw new ProtoError('SOF 대기 타임아웃');
+    const b=await readByte(rem); if(b===null) throw new ProtoError('SOF 대기 타임아웃'); if(b===SOF) break; }
+  const hd=await readN(3,Math.max(0,dl-performance.now())); if(hd.length<3) throw new ProtoError('헤더 타임아웃');
+  const cmd=hd[0],len=hd[1]|(hd[2]<<8); let pay=[];
+  if(len){ pay=await readN(len,Math.max(0,dl-performance.now())); if(pay.length<len) throw new ProtoError('payload 타임아웃'); }
+  const cb=await readN(2,Math.max(0,dl-performance.now())); if(cb.length<2) throw new ProtoError('CRC 타임아웃');
+  const rxc=cb[0]|(cb[1]<<8), cc=crc16([cmd,len&0xFF,(len>>8)&0xFF,...pay]);
+  if(rxc!==cc) throw new ProtoError('응답 CRC16 불일치'); return {cmd,payload:pay};
+}
+async function expectAck(timeout){ const {cmd,payload}=await recvFrame(timeout);
+  if(cmd===RESP_ACK) return payload;
+  if(cmd===RESP_NAK){ const ec=payload.length?payload[0]:0xFF; throw new ProtoError('NAK 0x'+hex2(ec)+' '+(ERR_NAMES[ec]||'?')); }
+  throw new ProtoError('예상 외 응답 0x'+hex2(cmd)); }
+async function enterBootloader(timeout){ const dl=performance.now()+timeout; let buf=[];
+  while(performance.now()<dl){ await wr(new TextEncoder().encode('BOOTLOAD\r\n')); await sleep(130);
+    while(rx.length) buf.push(rx.shift()); if(buf.length>512) buf=buf.slice(-512);
+    if(String.fromCharCode.apply(null,buf).includes('CURA BL')){ await sleep(400); rx=[]; return true; } } return false; }
+
+// 부트로더 버전 바이트 → 'v0.x.y'
+function blStr(v){ return 'v0.'+((v>>4)&0xF)+'.'+(v&0xF); }
+// 펌웨어 버전 4바이트 → 'x.y.z' (미상 0xFFFFFFFF → '')
+function fwStr(v){ if(v===0xFFFFFFFF) return ''; return ((v>>>16)&0xFF)+'.'+((v>>>8)&0xFF)+'.'+(v&0xFF); }
+// 날짜: unix초(1e9~) → 로컬 YYYY-MM-DD HH:MM:SS, YYYYMMDD 십진 → 그대로, 미상 → ''
+function dateStr(d){ if(d===0xFFFFFFFF||d===0) return '';
+  if(d>=1000000000){ const t=new Date(d*1000),p=n=>String(n).padStart(2,'0');
+    return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate())+' '+p(t.getHours())+':'+p(t.getMinutes())+':'+p(t.getSeconds()); }
+  return String(d); }
+
+// ── 상태 ──
+let curChip='main', chosenPort=null, fwBytes=null, fwName='', serverFiles=[];
+function chipPrefix(){ return curChip==='wear'?'firmware/신체착용부/':'firmware/본체/'; }
+function expBase(){ return curChip==='wear'?0x08001000:0x08008000; }
+
+function setChip(chip){ curChip=chip;
+  $('chipMain').classList.toggle('cur',chip==='main');
+  $('chipWear').classList.toggle('cur',chip==='wear');
+  $('wearHint').style.display = chip==='wear'?'block':'none';
+  renderFw(); }
+// 파일명에서 호환 부트로더 파싱: "...BLv0.3.2..." → "v0.3.2"
+function fwCompatBl(rel){ const m=(rel||'').match(/BLv?(\d+\.\d+\.\d+)/i); return m?('v'+m[1]):''; }
+function updMeta(){
+  const f=serverFiles.find(x=>x.rel===$('fw').value); $('fwmeta').textContent=f?kb(f.size):'';
+  // ★선택 펌웨어의 호환 부트로더 명시 + 연결된 보드 BL과 대조 경고
+  const need=fwCompatBl($('fw').value), board=($('dvBl').textContent||'').trim(), el=$('blcompat');
+  if(!el) return;
+  if(!need){ el.style.display='none'; el.textContent=''; return; }
+  el.style.display='block';
+  if(board && board!==need){
+    el.innerHTML='⚠ 이 펌웨어는 부트로더 <b>'+need+'</b> 필요 — 현재 보드 <b>'+board+'</b>. ST-Link로 '+need+'를 먼저 설치한 뒤 이 앱을 플래시하세요.';
+    el.style.color='#c0392b'; el.style.fontWeight='600';
+  }else{
+    el.innerHTML='호환 부트로더: <b>'+need+'</b>'+(board?(' · 현재 보드 '+board+' ✓'):' (ST-Link로 설치 필요)');
+    el.style.color=''; el.style.fontWeight='';
+  }
+}
+function updGo(){ $('go').disabled=!($('fw').value && fwBytes && chosenPort); }
+
+// ── 펌웨어 목록(서버 저장본) — 칩별 필터 + 최신버전 자동(양산식) ──
+async function loadFw(){ $('fw').innerHTML='<option value="">불러오는 중…</option>';
+  try{ const j=await (await fetch('manifest.json')).json(); serverFiles=(j&&j.files)||[]; }catch(e){ serverFiles=[]; }
+  renderFw(); }
+function verKey(f){ const m=(f.label||f.rel||'').match(/v(\d+)\.(\d+)\.(\d+)/i); return m?(+m[1]*10000+ +m[2]*100+ +m[3]):0; }
+function renderFw(){ const sel=$('fw'), pre=chipPrefix();
+  const list=serverFiles.filter(f=>(f.rel||'').indexOf(pre)===0).sort((a,b)=>verKey(b)-verKey(a)||(a.rel<b.rel?1:-1));
+  sel.innerHTML = list.length ? list.map(f=>'<option value="'+h(f.rel)+'">'+h(f.label)+' · '+kb(f.size)+'</option>').join('')
+                              : '<option value="">(이 칩 펌웨어 없음)</option>';
+  onFwChange(); }
+// 펌웨어 선택 → 그 .bin을 서버에서 받아 fwBytes
+async function onFwChange(){ const rel=$('fw').value; fwBytes=null; updMeta();
+  if(!rel){ updGo(); return; }
+  try{ const buf=await (await fetch(encodeURI(rel))).arrayBuffer();
+    fwBytes=new Uint8Array(buf); fwName=rel.split('/').pop(); }catch(e){ fwBytes=null; }
+  updGo(); }
+$('fw').addEventListener('change', onFwChange);
+$('chipMain').addEventListener('click', ()=>setChip('main'));
+$('chipWear').addEventListener('click', ()=>setChip('wear'));
+
+// ── ① 포트 선택 (이 PC의 COM — Web Serial) ↔ 해제 ──
+let busyIO=false;   // 포트 조회/플래시 중복 방지
+$('selPort').addEventListener('click', async ()=>{
+  if(busyIO) return;
+  if(chosenPort){ chosenPort=null; $('selPort').classList.remove('on'); $('selPort').textContent='① 포트 선택';
+    $('status').textContent=''; setDev(null); updGo(); return; }
+  try{ chosenPort=await navigator.serial.requestPort();
+    $('selPort').classList.add('on'); $('selPort').textContent='① 포트 해제'; updGo();
+    await queryInfo();          // ★선택 즉시 기기 ID/부트로더/펌웨어 조회(구 도구 --info와 동일)
+  }catch(e){ /* 취소 */ } });
+
+// 포트에서 CONNECT n회 시도 → ACK payload 반환(없으면 null). (열림 상태 전제)
+async function tryConnect(n, to){
+  for(let a=0;a<n;a++){ try{ rx=[]; await wr(buildFrame(CMD_CONNECT)); return await expectAck(to); }catch(e){ await sleep(150); } }
+  return null;
+}
+// 포트 선택 직후 기기정보 조회: 1차 CONNECT(비파괴) → 없으면 BOOTLOAD로 BL 진입 후 재시도.
+async function queryInfo(){
+  if(!chosenPort || busyIO) return;
+  busyIO=true; $('go').disabled=true;
+  $('status').className='status busy'; $('status').textContent='기기 확인 중…'; setDev(null);
+  $('logwrap').hidden=false; log('[조회] 포트 열기...');
+  try{
+    rx=[]; await chosenPort.open({baudRate:115200});
+    try{ await chosenPort.setSignals({dataTerminalReady:false,requestToSend:false}); }catch(e){ log('  setSignals 무시: '+((e&&e.message)||e)); }
+    writer=chosenPort.writable.getWriter(); reader=chosenPort.readable.getReader(); pump();
+    log('  포트 열림. 안정화 300ms...'); await sleep(300);
+    log('  CONNECT 6회 시도...');
+    let resp=await tryConnect(6, 600);
+    log('  1차: '+(resp?('응답 '+resp.length+'B'):('무응답 (수신 '+rx.length+'B)')));
+    if(!resp){ $('status').textContent='기기 확인 중… (부트로더 진입)';
+      log('  BOOTLOAD 전송 후 재시도...');
+      await enterBootloader(4000); rx=[]; resp=await tryConnect(4, 1000);
+      log('  2차: '+(resp?('응답 '+resp.length+'B'):'무응답')); }
+    if(resp && resp.length>=9){
+      const blVer=resp[0], appBase=rdU32le(resp,1);
+      let uid=''; if(resp.length>=21) uid=hex8(rdU32le(resp,9))+hex8(rdU32le(resp,13))+hex8(rdU32le(resp,17));
+      let fw='',date=''; if(resp.length>=30 && resp[21]){ fw=fwStr(rdU32le(resp,22)); date=dateStr(rdU32le(resp,26)); }
+      setDev({uid:uid, bl:blStr(blVer), fw:fw, date:date});
+      log('  ✓ BL '+blStr(blVer)+' / app_base 0x'+hex8(appBase)+' / UID '+(uid||'(구BL)'));
+      // 연결된 보드에 맞춰 칩 자동 선택(펌웨어 목록·가드 정합)
+      if(appBase===0x08008000 && curChip!=='main') setChip('main');
+      else if(appBase===0x08001000 && curChip!=='wear') setChip('wear');
+      $('status').className='status ok'; $('status').textContent='기기 확인됨';
+    }else{
+      setDev(null); $('status').className='status fail';
+      $('status').textContent='기기 응답 없음 — 포트/전원/연결 확인';
+      log('  ✗ 기기 응답 없음 (포트/전원/연결/칩 확인)');
+    }
+  }catch(e){ setDev(null); $('status').className='status fail'; $('status').textContent='포트 오류: '+((e&&e.message)||e); log('  ✗ 예외: '+((e&&e.message)||e)); }
+  finally{ await cleanup(); busyIO=false; updGo(); }
+}
+
+// ── 기기정보 박스 ──
+function setDev(i){ $('dvUid').textContent=i&&i.uid?i.uid:''; $('dvBl').textContent=i&&i.bl?i.bl:'';
+  $('dvFw').textContent=i&&i.fw?i.fw:''; $('dvDate').textContent=i&&i.date?i.date:'';
+  updMeta(); }   /* ★보드 BL이 갱신되면 선택 펌웨어와의 호환 대조를 다시 표시 */
+
+async function cleanup(){ readerActive=false;
+  try{ if(reader){ await reader.cancel(); reader.releaseLock(); } }catch(e){}
+  try{ if(writer){ writer.releaseLock(); } }catch(e){}
+  try{ if(chosenPort) await chosenPort.close(); }catch(e){} reader=writer=null; }
+
+// ── ② 시작: 로컬 포트로 CURA-BL 플래시 (--enter → CONNECT → BEGIN → DATA → END → GO) ──
+const PHASE={enter:'부트로더 진입',connect:'연결',erase:'소거',data:'펌웨어 전송',verify:'검증',go:'실행',done:'완료'};
+function setPhase(k){ $('phase').textContent=PHASE[k]||'진행 중'; }
+function pbar(p){ p=Math.max(0,Math.min(100,p)); $('fill').style.width=p.toFixed(0)+'%'; $('pct').textContent=Math.round(p)+'%'; }
+function log(s){ const el=$('log'); el.textContent+=s+'\n'; el.scrollTop=el.scrollHeight; }
+
+$('go').addEventListener('click', async ()=>{
+  if(!fwBytes||!chosenPort) return;
+  const st=$('status'), btn=$('go');
+  btn.disabled=true; $('selPort').disabled=true; st.className='status busy'; st.textContent='플래시 중…';
+  $('logwrap').hidden=false; $('log').textContent=''; $('fill').className='fill'; pbar(3); setPhase('enter');
+  let devInfo=null;
+  try{
+    // 16B 0xFF 패딩 → size/crc32
+    let img=fwBytes; const pad=((-img.length)%ALIGN+ALIGN)%ALIGN;
+    if(pad){ const p=new Uint8Array(img.length+pad); p.set(img,0); p.fill(0xFF,img.length); img=p; }
+    const size=img.length, fwCrc=crc32(img);
+    log('펌웨어: '+fwName+'  ('+size+' B, CRC32=0x'+hex8(fwCrc)+')');
+
+    rx=[]; await chosenPort.open({baudRate:115200});
+    try{ await chosenPort.setSignals({dataTerminalReady:false,requestToSend:false}); }catch(e){}
+    writer=chosenPort.writable.getWriter(); reader=chosenPort.readable.getReader(); pump();
+    await sleep(300);                                  // 개방 시 리셋 대비 부트로더 안정화 대기
+
+    // 0-1) 연결: 1차 CONNECT(끈질기게, 이미 BL이면 즉시) → 없으면 BOOTLOAD로 앱을 BL 진입시킨 뒤 재시도.
+    setPhase('connect'); log('[1/5] CONNECT ...'); pbar(8);
+    let resp=await tryConnect(6, 600);
+    if(!resp){ setPhase('enter'); log('  부트로더 진입(BOOTLOAD) ...'); await enterBootloader(8000); rx=[];
+      setPhase('connect'); resp=await tryConnect(5, 1500); }
+    if(resp===null) throw new ProtoError('CONNECT 실패: 보드 응답 없음(포트/전원/연결 확인)');
+    if(resp.length<9) throw new ProtoError('CONNECT 응답 부족');
+    const blVer=resp[0], appBase=rdU32le(resp,1), appMax=rdU32le(resp,5);
+    let uid=''; if(resp.length>=21) uid=hex8(rdU32le(resp,9))+hex8(rdU32le(resp,13))+hex8(rdU32le(resp,17));
+    let curFw='',curDate=''; if(resp.length>=30 && resp[21]){ curFw=fwStr(rdU32le(resp,22)); curDate=dateStr(rdU32le(resp,26)); }
+    devInfo={uid:uid, bl:blStr(blVer)}; setDev(devInfo);
+    log('  BL '+blStr(blVer)+', app_base=0x'+hex8(appBase)+', UID='+(uid||'(구BL)'));
+    // 칩 오선택 가드
+    if(appBase!==expBase()){ const got=(appBase===0x08008000)?'본체(H562)':(appBase===0x08001000)?'착용부(C031)':'알수없음';
+      throw new ProtoError('칩 불일치 — 선택은 '+(curChip==='wear'?'착용부':'본체')+'인데 연결된 보드는 '+got+' 입니다. 포트/칩 확인.'); }
+    if(size>appMax) throw new ProtoError('이미지가 app_max 초과');
+    pbar(12);
+
+    // 2) BEGIN (소거) — ★메타에 펌웨어버전+업로드날짜 기록(16B, upload.py와 동일).
+    //   파일명 vX.Y.Z → (maj<<16|min<<8|patch), 날짜=Unix now. 이래야 다음 접속 시 버전·날짜가 표시됨.
+    //   (이전엔 8B만 보내 BL이 버전/날짜를 0xFFFFFFFF=미상으로 기록 → 화면에 안 떴음.)
+    setPhase('erase'); log('[2/5] BEGIN (소거) ...');
+    const mVer=(fwName||'').match(/v(\d+)\.(\d+)\.(\d+)/i);
+    const fwVerNum=(mVer && (+mVer[1]<256) && (+mVer[2]<256) && (+mVer[3]<256))
+      ? ((((+mVer[1])<<16)|((+mVer[2])<<8)|(+mVer[3]))>>>0) : 0xFFFFFFFF;
+    const updDate=Math.floor(Date.now()/1000)>>>0;   // Unix 초
+    await wr(buildFrame(CMD_BEGIN, u32le(size).concat(u32le(fwCrc)).concat(u32le(fwVerNum)).concat(u32le(updDate))));
+    await expectAck(10000);
+    log('  소거 완료 (메타 기록: 버전 '+(fwVerNum===0xFFFFFFFF?'미상':fwStr(fwVerNum))+')'); pbar(20);
+
+    // 3) DATA
+    setPhase('data'); log('[3/5] DATA ...');
+    let offset=0; const t0=performance.now();
+    while(offset<size){ const n=Math.min(CHUNK,size-offset);
+      const frame=buildFrame(CMD_DATA,u32le(offset).concat(Array.from(img.subarray(offset,offset+n))));
+      let ok=false,le=null;
+      for(let a=0;a<3;a++){ await wr(frame);
+        try{ const ackp=await expectAck(3000); if(ackp.length>=4 && rdU32le(ackp,0)!==offset){ le=new ProtoError('ACK offset 불일치'); continue; } ok=true; break; }
+        catch(e){ le=e; await sleep(50); } }
+      if(!ok) throw new ProtoError('DATA offset='+offset+' 실패: '+(le?le.message:''));
+      offset+=n; pbar(20+offset/size*72); }
+
+    // 4) END (검증·메타)
+    setPhase('verify'); log('[4/5] END (검증) ...');
+    await wr(buildFrame(CMD_END)); await expectAck(5000); log('  검증 OK'); pbar(94);
+
+    // 5) GO (점프)
+    setPhase('go'); log('[5/5] GO (실행) ...');
+    let jumped=false,lg=null;
+    for(let a=0;a<3;a++){ try{ rx=[]; await wr(buildFrame(CMD_GO)); await expectAck(2000); jumped=true; break; }catch(e){ lg=e; await sleep(200); } }
+    log(jumped?'  앱 점프 성공':'  GO ACK 미확인(점프했을 수 있음)');
+
+    pbar(100); $('fill').className='fill ok'; setPhase('done');
+    st.className='status ok'; st.textContent='✅ 완료';
+    // 완료 정보: UID·BL(위) + 올린 버전(파일)·오늘 날짜
+    const mV=(fwName||'').match(/v(\d+)\.(\d+)\.(\d+)/i); const d=new Date(),p=n=>String(n).padStart(2,'0');
+    setDev({uid:(devInfo&&devInfo.uid)||'', bl:(devInfo&&devInfo.bl)||'',
+      fw: mV?(mV[1]+'.'+mV[2]+'.'+mV[3]):'',
+      date: d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds())});
+    log('업로드 성공.');
+  }catch(e){
+    const msg=(e&&e.message)||String(e); log('실패: '+msg);
+    $('fill').className='fill fail'; setPhase('go'); $('phase').textContent='실패';
+    st.className='status fail'; st.textContent='❌ 실패 (자세히 보기)';
+  }finally{ await cleanup(); btn.disabled=false; $('selPort').disabled=false; updGo(); }
+});
+
+loadFw();
+</script>
+</body></html>
