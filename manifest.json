@@ -1,15 +1,15 @@
 {
-  "updated": "2026-09-29",
+  "updated": "2026-10-06",
   "files": [
     {
-      "rel": "firmware/본체/본체_v0.4.5_20260929_BLv0.3.2.bin",
-      "label": "본체/본체_v0.4.5_20260929_BLv0.3.2.bin",
+      "rel": "firmware/본체/본체_v0.4.5_20261006_BLv0.3.2.bin",
+      "label": "본체/본체_v0.4.5_20261006_BLv0.3.2.bin",
       "chip": "main",
       "app": "v0.4.5",
-      "date": "2026-09-29",
+      "date": "2026-10-06",
       "compat_bl": "v0.3.2",
-      "size": 128192,
-      "md5": "b2636364d10c0eea5d6a8807e86fd071"
+      "size": 128480,
+      "md5": "cdde412ec818105bde5faabcb6750ad2"
     },
     {
       "rel": "firmware/본체/본체_v0.4.2_20260908_BLv0.3.2.bin",
