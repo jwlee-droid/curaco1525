@@ -77,23 +77,14 @@ pre{margin:10px 0 0;background:#f7fafd;border:1px solid var(--line);border-radiu
          font-weight:600;color:var(--sub);cursor:pointer;font-family:inherit;white-space:nowrap}
 .cd-link:hover{border-color:var(--sky);color:var(--sky-d)}
 .cd-bar [hidden]{display:none!important}
-#cgate{position:fixed;inset:0;z-index:9998;background:rgba(20,40,70,.35);display:flex;align-items:center;justify-content:center}
-#cgate[hidden]{display:none}
-#cgate .box{background:#fff;border:1.5px solid #cfe0ee;border-radius:14px;padding:24px 22px;max-width:340px;width:86%;text-align:center}
-#cgate .t{font-size:16px;font-weight:700;color:#1a3b57;margin-bottom:4px}
-#cgate .m{font-size:12.5px;color:#5b7189;margin-bottom:14px;line-height:1.5}
-#cgPw{width:100%;padding:10px 12px;border:1.5px solid #cfe0ee;border-radius:10px;font-size:15px;text-align:center}
-#cgate .row{display:flex;gap:8px;margin-top:10px}
-#cgate .row button{flex:1;padding:10px;border:0;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
-#cgOk{background:#2f8fd6;color:#fff} #cgNo{background:#eef3f8;color:var(--sub)}
-#cgErr{font-size:12.5px;color:#c0392b;margin-top:8px;min-height:16px}
 </style></head><body>
-<!-- ★비밀번호 게이트 (비번·ON/OFF는 config.js 에서 관리) -->
+<!-- ★비밀번호 게이트 — v2.3: 비밀번호는 구글 Apps Script 가 확인(클라우드 로그인과 하나). 기기당 처음 1번, 이후 자동 로그인.
+     config.js 는 ON/OFF(ENABLED)와 인터넷 끊김 때 예비 확인(PASSWORD_SHA256)에만 쓴다 -->
 <div id="gate" style="position:fixed;inset:0;z-index:9999;background:#f4f8fb;display:flex;align-items:center;justify-content:center">
   <div style="background:#fff;border:1.5px solid #cfe0ee;border-radius:14px;padding:28px 26px;max-width:340px;width:86%;box-shadow:0 6px 24px rgba(0,0,0,.08);text-align:center">
     <div style="font-size:18px;font-weight:700;color:#1a3b57;margin-bottom:4px">IRIS 펌웨어 업데이트</div>
-    <div id="gmsg" style="font-size:13px;color:#5b7189;margin-bottom:16px">비밀번호를 입력하세요</div>
-    <input id="gpw" type="password" autocomplete="off" placeholder="비밀번호"
+    <div id="gmsg" style="font-size:13px;color:#5b7189;margin-bottom:16px">비밀번호를 입력하세요 (이 기기에서 처음 1번)</div>
+    <input id="gpw" type="password" autocomplete="current-password" placeholder="비밀번호"
       style="width:100%;box-sizing:border-box;padding:11px 12px;border:1.5px solid #cfe0ee;border-radius:10px;font-size:15px;margin-bottom:10px">
     <button id="gbtn" type="button"
       style="width:100%;padding:11px;border:0;border-radius:10px;background:#2f8fd6;color:#fff;font-size:15px;font-weight:600;cursor:pointer">확인</button>
@@ -102,7 +93,7 @@ pre{margin:10px 0 0;background:#f7fafd;border:1px solid var(--line);border-radiu
 </div>
 <div class="panel">
 <div class="top">
-  <h1>IRIS 펌웨어 업데이트<span class="ver">v2.2</span></h1>
+  <h1>IRIS 펌웨어 업데이트<span class="ver">v2.3</span></h1>
   <div class="brand">CURACO</div>
 </div>
 <p class="sub">이 PC에 연결된 제품에 펌웨어를 설치합니다. <span style="color:var(--sky-d)">(포트는 이 PC에서 직접 선택)</span></p>
@@ -143,7 +134,6 @@ pre{margin:10px 0 0;background:#f7fafd;border:1px solid var(--line);border-radiu
 <!-- ★v2.2 클라우드 기록 상태 — 플래시 1회(성공·실패)마다 구글 시트 'IRIS펌웨어' 탭에 1행 -->
 <div class="cd-bar" id="cloud">
   <div class="cd-st" id="cdSt">-</div>
-  <button class="cd-link" id="btnCdLogin" type="button">로그인</button>
   <button class="cd-link" id="btnCdOff" type="button">로그아웃</button>
 </div>
 
@@ -153,38 +143,7 @@ pre{margin:10px 0 0;background:#f7fafd;border:1px solid var(--line);border-radiu
 </details>
 </div>
 
-<!-- ★v2.2 클라우드 로그인(비밀번호는 구글 Apps Script 가 확인 — LTE 연결 테스트와 같은 비밀번호·같은 로그인) -->
-<div id="cgate" hidden>
-  <div class="box">
-    <div class="t">클라우드 기록 로그인</div>
-    <div class="m">펌웨어 업데이트 기록을 구글 시트에 남깁니다.<br>이 기기에서 처음 1번만 입력합니다.</div>
-    <input id="cgPw" type="password" autocomplete="current-password" placeholder="비밀번호">
-    <div class="row"><button id="cgNo" type="button">나중에</button><button id="cgOk" type="button">로그인</button></div>
-    <div id="cgErr"></div>
-  </div>
-</div>
-
 <script src="config.js"></script>
-<script>
-/* ★비밀번호 게이트 로직 (config.js 의 ENABLED·PASSWORD_SHA256 사용) */
-(function(){
-  var C = window.SITE_CONFIG || { ENABLED:true, PASSWORD_SHA256:"" };
-  var gate=document.getElementById('gate'), msg=document.getElementById('gmsg'),
-      pw=document.getElementById('gpw'), btn=document.getElementById('gbtn'), err=document.getElementById('gerr');
-  function unlock(){ try{ sessionStorage.setItem('cura_ok','1'); }catch(e){} gate.style.display='none'; }
-  if(C.ENABLED===false){ pw.style.display='none'; btn.style.display='none';
-    msg.innerHTML='현재 <b>잠금(중지)</b> 상태입니다.'; return; }              /* 링크 OFF */
-  try{ if(sessionStorage.getItem('cura_ok')==='1'){ gate.style.display='none'; } }catch(e){}
-  async function sha256(s){ var b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
-    return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,'0');}).join(''); }
-  async function check(){ err.textContent='';
-    var h=await sha256(pw.value||'');
-    if(h===String(C.PASSWORD_SHA256||'').toLowerCase()){ unlock(); }
-    else { err.textContent='비밀번호가 틀렸습니다.'; pw.value=''; pw.focus(); } }
-  if(btn){ btn.addEventListener('click', check); }
-  if(pw){ pw.addEventListener('keydown', function(e){ if(e.key==='Enter'){ check(); } }); pw.focus(); }
-})();
-</script>
 <script>
 const $=id=>document.getElementById(id);
 function h(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -464,7 +423,7 @@ $('go').addEventListener('click', async ()=>{
    플래시 1회(성공·실패) = 구글 시트 'IRIS펌웨어' 탭 1행. 서버·비밀번호·로그인 토큰은 LTE 연결 테스트와 공유
    (같은 github.io 도메인이라 한 번 로그인하면 두 페이지 모두 됨). 못 보낸 기록은 미전송으로 쌓아 자동 재전송.
    정본 = C:\jinwoo\Claude\03_프로젝트\문서 공유 시스템\기획\2026-10-29_LTE개통기록_구글시트저장_설정가이드_v1.3.0.md */
-const PAGE_VER='v2.2';
+const PAGE_VER='v2.3';
 const CD_KEY='cura_lte_cloud_v1', FWQ_KEY='cura_iris_fwq_v1';
 const CD_URL0='https://script.google.com/macros/s/AKfycbyi7gTwGrqXpfbgYxYpVzF5JQnEo13U8E4svd63RDuiybWL5PQLHJfg6yu3RMzth5JU/exec';
 let cd={url:'',token:'',device:''}, fwQ=[], cdBusy=false;
@@ -473,11 +432,10 @@ function cdLoad(){ try{ cd=Object.assign(cd, JSON.parse(localStorage.getItem(CD_
 function cdStore(){ try{ localStorage.setItem(CD_KEY, JSON.stringify(cd)); localStorage.setItem(FWQ_KEY, JSON.stringify(fwQ)); }catch(e){} }
 function cdUrl(){ return /^https:\/\/script\.google\.com\/(a\/macros\/[\w.-]+|macros)\/s\/[\w-]+\/exec$/.test(cd.url||'') ? cd.url : CD_URL0; }
 function cdShow(kind,msg){ const on=!!cd.token;
-  $('btnCdLogin').hidden=on; $('btnCdOff').hidden=!on;
-  $('cdSt').className='cd-st '+(kind||(on&&fwQ.length?'ng':''));
+  $('btnCdOff').hidden=!on;
+  $('cdSt').className='cd-st '+(kind||(fwQ.length?'ng':''));
   $('cdSt').innerHTML=msg||(on ? '☁ 업데이트 기록 저장 켜짐 ('+h(cd.device)+')'+(fwQ.length?' · <b>미전송 '+fwQ.length+'건</b> — 인터넷 연결되면 자동 전송':'')
-                               : (fwQ.length ? '☁ 클라우드 로그인 안 됨 · <b>미전송 '+fwQ.length+'건</b> — [로그인] 하면 바로 저장됩니다'
-                                             : '☁ 클라우드 로그인 안 됨 — [로그인] 하면 업데이트 기록이 구글 시트에 남습니다')); }
+                               : '☁ 인터넷 없이 열림 — 업데이트 기록은 이 PC 에 보관'+(fwQ.length?' · <b>미전송 '+fwQ.length+'건</b>':'')+' (인터넷 연결 후 다시 열면 로그인)'); }
 async function cdCall(body){ const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),30000);
   try{ const r=await fetch(cdUrl(),{method:'POST',body:JSON.stringify(body),signal:ctl.signal}); const t=await r.text();
     try{ return JSON.parse(t); }catch(_){ return {ok:false,err:'서버 응답 형식 오류(HTTP '+r.status+')'}; } }
@@ -507,29 +465,44 @@ async function cdFlush(){
     if(!r.ok){ err=r.err||'저장 실패'; break; }
     added+=r.added; const done=new Set(part.map(x=>x.id)); fwQ=fwQ.filter(x=>!done.has(x.id)); cdStore(); }
   cdBusy=false;
-  if(err){ if(/등록되지 않은|차단된/.test(err)){ cd.token=''; cdStore(); }
+  if(err){ if(/등록되지 않은|차단된/.test(err)){ cd.token=''; cdStore(); gateShow('로그인이 끊겼습니다 — 비밀번호를 다시 입력하세요'); }
     log('클라우드 기록 실패: '+err); cdShow('ng','✖ 업데이트 기록 저장 실패 — '+h(err)+(fwQ.length?' · 미전송 '+fwQ.length+'건 보관':'')); }
   else cdShow('ok','✔ 업데이트 기록 저장 완료 — '+added+'건 (구글 시트 IRIS펌웨어)'); }
 
-function cgShow(){ $('cgErr').textContent=''; $('cgPw').value=''; $('cgate').hidden=false; setTimeout(()=>$('cgPw').focus(),50); }
-async function cgLogin(){ const pw=$('cgPw').value; if(!pw){ $('cgErr').textContent='비밀번호를 넣으세요'; return; }
-  $('cgOk').disabled=true; $('cgErr').textContent='확인 중…';
+/* ★v2.3 자동 로그인 — 페이지 잠금 화면 = 클라우드 로그인(비밀번호 1개, Apps Script 가 확인).
+   토큰이 있으면 잠금 화면 없이 바로 열림(기기당 처음 1번만 입력). config.js: ENABLED=false 면 잠금 유지,
+   인터넷이 안 돼 서버 확인이 안 될 때만 PASSWORD_SHA256 으로 예비 확인(이때 기록은 이 PC 에 쌓였다가 나중에 전송). */
+const SITE=window.SITE_CONFIG||{ENABLED:true,PASSWORD_SHA256:''};
+function gateHide(){ try{ sessionStorage.setItem('cura_ok','1'); }catch(e){} $('gate').style.display='none'; }
+function gateShow(msg){ $('gmsg').textContent=msg||'비밀번호를 입력하세요 (이 기기에서 처음 1번)';
+  $('gerr').textContent=''; $('gpw').value=''; $('gate').style.display='flex'; setTimeout(()=>$('gpw').focus(),50); }
+async function sha256(s){ const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join(''); }
+async function gateLogin(){ const pw=$('gpw').value; if(!pw){ $('gerr').textContent='비밀번호를 넣으세요'; return; }
+  $('gbtn').disabled=true; $('gerr').textContent='확인 중…';
   const dev=autoDevName(), r=await cdCall({act:'login', device:dev, pw});
-  $('cgOk').disabled=false; $('cgPw').value='';                    // 비밀번호는 남기지 않는다
-  if(!r.ok){ $('cgErr').textContent=r.err||'로그인 실패'; return; }
-  cd={url:cdUrl(), token:r.token, device:String(r.device||dev).replace(/[<>&"']/g,'')}; cdStore();
-  $('cgate').hidden=true; cdShow('ok','✔ 로그인됨 — 업데이트 기록이 자동 저장됩니다'); cdFlush(); }
-$('btnCdLogin').addEventListener('click', cgShow);
-$('btnCdOff').addEventListener('click', ()=>{ cd={url:cd.url,token:'',device:''}; cdStore(); cdShow(); });
-$('cgOk').addEventListener('click', cgLogin);
-$('cgNo').addEventListener('click', ()=>{ $('cgate').hidden=true; });
-$('cgPw').addEventListener('keydown', e=>{ if(e.key==='Enter') cgLogin(); });
+  if(r.ok){
+    $('gbtn').disabled=false; $('gpw').value='';                    // 비밀번호는 남기지 않는다
+    cd={url:cdUrl(), token:r.token, device:String(r.device||dev).replace(/[<>&"']/g,'')}; cdStore();
+    gateHide(); cdShow('ok','✔ 로그인됨 — 다음부터 자동으로 열리고 업데이트 기록이 자동 저장됩니다'); cdFlush(); return; }
+  // 서버에 못 닿았을 때만 예비 확인(오프라인 작업용). 틀린 비밀번호·잠금은 그대로 거부
+  if(/접속 실패|시간 초과/.test(r.err||'') && SITE.PASSWORD_SHA256 && (await sha256(pw))===String(SITE.PASSWORD_SHA256).toLowerCase()){
+    $('gbtn').disabled=false; $('gpw').value=''; gateHide(); cdShow(); return; }
+  $('gbtn').disabled=false; $('gpw').value=''; $('gerr').textContent=r.err||'로그인 실패'; $('gpw').focus(); }
+$('gbtn').addEventListener('click', gateLogin);
+$('gpw').addEventListener('keydown', e=>{ if(e.key==='Enter') gateLogin(); });
+$('btnCdOff').addEventListener('click', ()=>{ cd={url:cd.url,token:'',device:''}; cdStore(); cdShow();
+  try{ sessionStorage.removeItem('cura_ok'); }catch(e){} gateShow('로그아웃했습니다 — 다시 쓰려면 비밀번호를 입력하세요'); });
 window.addEventListener('online', ()=>cdFlush());
 cdLoad(); try{ $('worker').value=localStorage.getItem('cura_iris_worker')||''; }catch(e){}
 cdShow();
-if(cd.token) cdCall({act:'ping', token:cd.token}).then(r=>{
-  if(!r.ok && /등록되지 않은|차단된/.test(r.err||'')){ cd.token=''; cdStore(); cdShow('ng','로그인이 끊겼습니다 — [로그인] 을 눌러 다시 로그인하세요'); }
-  else cdFlush(); });
+if(SITE.ENABLED===false){ $('gpw').style.display='none'; $('gbtn').style.display='none';
+  $('gmsg').innerHTML='현재 <b>잠금(중지)</b> 상태입니다.'; }                 /* 링크 OFF — 토큰이 있어도 열지 않음 */
+else if(cd.token){ gateHide();                                           // 자동 로그인
+  cdCall({act:'ping', token:cd.token}).then(r=>{
+    if(!r.ok && /등록되지 않은|차단된/.test(r.err||'')){ cd.token=''; cdStore(); cdShow(); gateShow('로그인이 끊겼습니다 — 비밀번호를 다시 입력하세요'); }
+    else cdFlush(); }); }
+else gateShow();
 
 loadFw();
 </script>
