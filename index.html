@@ -65,6 +65,28 @@ pre{margin:10px 0 0;background:#f7fafd;border:1px solid var(--line);border-radiu
       padding:11px 14px;font-size:13.5px;color:#b03434;margin-bottom:14px;line-height:1.5}
 .warn.show{display:block}
 .hint{font-size:12px;color:var(--sub);margin-top:2px}
+/* ★v2.2 클라우드 기록(구글 시트 'IRIS펌웨어' 탭) — LTE 연결 테스트와 같은 서버·같은 로그인 */
+.wk{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.wk label{font-size:13px;color:var(--sub);white-space:nowrap}
+.wk input{flex:1;min-width:0;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit}
+.cd-bar{display:flex;align-items:center;gap:8px;margin-top:12px}
+.cd-st{flex:1;min-width:0;font-size:13px;padding:8px 10px;border-radius:8px;background:#f6f9fc;color:var(--ink)}
+.cd-st.ok{background:#eaf7ef;color:var(--ok)}
+.cd-st.ng{background:#fdeeee;color:var(--fail)}
+.cd-link{flex:none;background:#fff;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12.5px;
+         font-weight:600;color:var(--sub);cursor:pointer;font-family:inherit;white-space:nowrap}
+.cd-link:hover{border-color:var(--sky);color:var(--sky-d)}
+.cd-bar [hidden]{display:none!important}
+#cgate{position:fixed;inset:0;z-index:9998;background:rgba(20,40,70,.35);display:flex;align-items:center;justify-content:center}
+#cgate[hidden]{display:none}
+#cgate .box{background:#fff;border:1.5px solid #cfe0ee;border-radius:14px;padding:24px 22px;max-width:340px;width:86%;text-align:center}
+#cgate .t{font-size:16px;font-weight:700;color:#1a3b57;margin-bottom:4px}
+#cgate .m{font-size:12.5px;color:#5b7189;margin-bottom:14px;line-height:1.5}
+#cgPw{width:100%;padding:10px 12px;border:1.5px solid #cfe0ee;border-radius:10px;font-size:15px;text-align:center}
+#cgate .row{display:flex;gap:8px;margin-top:10px}
+#cgate .row button{flex:1;padding:10px;border:0;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+#cgOk{background:#2f8fd6;color:#fff} #cgNo{background:#eef3f8;color:var(--sub)}
+#cgErr{font-size:12.5px;color:#c0392b;margin-top:8px;min-height:16px}
 </style></head><body>
 <!-- ★비밀번호 게이트 (비번·ON/OFF는 config.js 에서 관리) -->
 <div id="gate" style="position:fixed;inset:0;z-index:9999;background:#f4f8fb;display:flex;align-items:center;justify-content:center">
@@ -80,7 +102,7 @@ pre{margin:10px 0 0;background:#f7fafd;border:1px solid var(--line);border-radiu
 </div>
 <div class="panel">
 <div class="top">
-  <h1>IRIS 펌웨어 업데이트<span class="ver">v2.1</span></h1>
+  <h1>IRIS 펌웨어 업데이트<span class="ver">v2.2</span></h1>
   <div class="brand">CURACO</div>
 </div>
 <p class="sub">이 PC에 연결된 제품에 펌웨어를 설치합니다. <span style="color:var(--sky-d)">(포트는 이 PC에서 직접 선택)</span></p>
@@ -99,6 +121,8 @@ pre{margin:10px 0 0;background:#f7fafd;border:1px solid var(--line);border-radiu
   <div class="hint" id="blcompat" style="display:none"></div>
 </div>
 
+<div class="wk"><label for="worker">작업자</label><input id="worker" placeholder="이름(선택)" autocomplete="off"></div>
+
 <div class="actions">
   <button class="sel" id="selPort" type="button">① 포트 선택</button>
   <button class="go" id="go" type="button" disabled>② 시작</button>
@@ -116,10 +140,28 @@ pre{margin:10px 0 0;background:#f7fafd;border:1px solid var(--line);border-radiu
   <div class="track"><div class="fill" id="fill"></div></div>
 </div>
 
+<!-- ★v2.2 클라우드 기록 상태 — 플래시 1회(성공·실패)마다 구글 시트 'IRIS펌웨어' 탭에 1행 -->
+<div class="cd-bar" id="cloud">
+  <div class="cd-st" id="cdSt">-</div>
+  <button class="cd-link" id="btnCdLogin" type="button">로그인</button>
+  <button class="cd-link" id="btnCdOff" type="button">로그아웃</button>
+</div>
+
 <details id="logwrap" hidden>
   <summary>자세히 보기</summary>
   <pre id="log"></pre>
 </details>
+</div>
+
+<!-- ★v2.2 클라우드 로그인(비밀번호는 구글 Apps Script 가 확인 — LTE 연결 테스트와 같은 비밀번호·같은 로그인) -->
+<div id="cgate" hidden>
+  <div class="box">
+    <div class="t">클라우드 기록 로그인</div>
+    <div class="m">펌웨어 업데이트 기록을 구글 시트에 남깁니다.<br>이 기기에서 처음 1번만 입력합니다.</div>
+    <input id="cgPw" type="password" autocomplete="current-password" placeholder="비밀번호">
+    <div class="row"><button id="cgNo" type="button">나중에</button><button id="cgOk" type="button">로그인</button></div>
+    <div id="cgErr"></div>
+  </div>
 </div>
 
 <script src="config.js"></script>
@@ -334,12 +376,14 @@ $('go').addEventListener('click', async ()=>{
   btn.disabled=true; $('selPort').disabled=true; st.className='status busy'; st.textContent='플래시 중…';
   $('logwrap').hidden=false; $('log').textContent=''; $('fill').className='fill'; pbar(3); setPhase('enter');
   let devInfo=null;
+  const rec=fwRecBegin();                              // ★v2.2 클라우드 기록 1행(성공·실패 모두)
   try{
     // 16B 0xFF 패딩 → size/crc32
     let img=fwBytes; const pad=((-img.length)%ALIGN+ALIGN)%ALIGN;
     if(pad){ const p=new Uint8Array(img.length+pad); p.set(img,0); p.fill(0xFF,img.length); img=p; }
     const size=img.length, fwCrc=crc32(img);
     log('펌웨어: '+fwName+'  ('+size+' B, CRC32=0x'+hex8(fwCrc)+')');
+    rec.size=size; rec.crc=hex8(fwCrc);
 
     rx=[]; await chosenPort.open({baudRate:115200});
     try{ await chosenPort.setSignals({dataTerminalReady:false,requestToSend:false}); }catch(e){}
@@ -357,6 +401,7 @@ $('go').addEventListener('click', async ()=>{
     let uid=''; if(resp.length>=21) uid=hex8(rdU32le(resp,9))+hex8(rdU32le(resp,13))+hex8(rdU32le(resp,17));
     let curFw='',curDate=''; if(resp.length>=30 && resp[21]){ curFw=fwStr(rdU32le(resp,22)); curDate=dateStr(rdU32le(resp,26)); }
     devInfo={uid:uid, bl:blStr(blVer)}; setDev(devInfo);
+    rec.uid=uid; rec.bl=blStr(blVer); rec.prevFw=curFw; rec.prevDate=curDate;   // ★v2.2 제품번호(UID)·이전 펌웨어
     log('  BL '+blStr(blVer)+', app_base=0x'+hex8(appBase)+', UID='+(uid||'(구BL)'));
     // 칩 오선택 가드
     if(appBase!==expBase()){ const got=(appBase===0x08008000)?'본체(H562)':(appBase===0x08001000)?'착용부(C031)':'알수없음';
@@ -406,12 +451,85 @@ $('go').addEventListener('click', async ()=>{
       fw: mV?(mV[1]+'.'+mV[2]+'.'+mV[3]):'',
       date: d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds())});
     log('업로드 성공.');
+    rec.result='성공'; rec.go=jumped?'확인':'미확인'; fwRecEnd(rec);
   }catch(e){
     const msg=(e&&e.message)||String(e); log('실패: '+msg);
+    rec.result='실패'; rec.err=msg; fwRecEnd(rec);
     $('fill').className='fill fail'; setPhase('go'); $('phase').textContent='실패';
     st.className='status fail'; st.textContent='❌ 실패 (자세히 보기)';
   }finally{ await cleanup(); btn.disabled=false; $('selPort').disabled=false; updGo(); }
 });
+
+/* ───── ★v2.2 클라우드 기록 (2026-10-29 사장 지시) ─────
+   플래시 1회(성공·실패) = 구글 시트 'IRIS펌웨어' 탭 1행. 서버·비밀번호·로그인 토큰은 LTE 연결 테스트와 공유
+   (같은 github.io 도메인이라 한 번 로그인하면 두 페이지 모두 됨). 못 보낸 기록은 미전송으로 쌓아 자동 재전송.
+   정본 = C:\jinwoo\Claude\03_프로젝트\문서 공유 시스템\기획\2026-10-29_LTE개통기록_구글시트저장_설정가이드_v1.3.0.md */
+const PAGE_VER='v2.2';
+const CD_KEY='cura_lte_cloud_v1', FWQ_KEY='cura_iris_fwq_v1';
+const CD_URL0='https://script.google.com/macros/s/AKfycbyi7gTwGrqXpfbgYxYpVzF5JQnEo13U8E4svd63RDuiybWL5PQLHJfg6yu3RMzth5JU/exec';
+let cd={url:'',token:'',device:''}, fwQ=[], cdBusy=false;
+function cdLoad(){ try{ cd=Object.assign(cd, JSON.parse(localStorage.getItem(CD_KEY)||'{}')); }catch(e){}
+  try{ fwQ=JSON.parse(localStorage.getItem(FWQ_KEY)||'[]'); }catch(e){ fwQ=[]; } if(!Array.isArray(fwQ)) fwQ=[]; }
+function cdStore(){ try{ localStorage.setItem(CD_KEY, JSON.stringify(cd)); localStorage.setItem(FWQ_KEY, JSON.stringify(fwQ)); }catch(e){} }
+function cdUrl(){ return /^https:\/\/script\.google\.com\/(a\/macros\/[\w.-]+|macros)\/s\/[\w-]+\/exec$/.test(cd.url||'') ? cd.url : CD_URL0; }
+function cdShow(kind,msg){ const on=!!cd.token;
+  $('btnCdLogin').hidden=on; $('btnCdOff').hidden=!on;
+  $('cdSt').className='cd-st '+(kind||(on&&fwQ.length?'ng':''));
+  $('cdSt').innerHTML=msg||(on ? '☁ 업데이트 기록 저장 켜짐 ('+h(cd.device)+')'+(fwQ.length?' · <b>미전송 '+fwQ.length+'건</b> — 인터넷 연결되면 자동 전송':'')
+                               : (fwQ.length ? '☁ 클라우드 로그인 안 됨 · <b>미전송 '+fwQ.length+'건</b> — [로그인] 하면 바로 저장됩니다'
+                                             : '☁ 클라우드 로그인 안 됨 — [로그인] 하면 업데이트 기록이 구글 시트에 남습니다')); }
+async function cdCall(body){ const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),30000);
+  try{ const r=await fetch(cdUrl(),{method:'POST',body:JSON.stringify(body),signal:ctl.signal}); const t=await r.text();
+    try{ return JSON.parse(t); }catch(_){ return {ok:false,err:'서버 응답 형식 오류(HTTP '+r.status+')'}; } }
+  catch(e){ return {ok:false,err:e.name==='AbortError'?'응답 시간 초과':'접속 실패 — 인터넷 확인'}; }
+  finally{ clearTimeout(tm); } }
+function autoDevName(){ const ua=navigator.userAgent;
+  const os=/Windows/.test(ua)?'Windows':/Android/.test(ua)?'Android':/Mac OS/.test(ua)?'Mac':/Linux/.test(ua)?'Linux':'PC';
+  const br=/Edg\//.test(ua)?'Edge':/Chrome\//.test(ua)?'Chrome':'브라우저';
+  const p=n=>String(n).padStart(2,'0'), d=new Date();
+  return [$('worker').value.trim(), os, br, p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())].filter(Boolean).join(' ').slice(0,40); }
+function stamp(){ const d=new Date(),p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
+
+function fwRecBegin(){ const m=(fwName||'').match(/v(\d+)\.(\d+)\.(\d+)/i), t=stamp();
+  return { id:t+'|'+Math.random().toString(36).slice(2,8), t, result:'', err:'', chip:curChip==='wear'?'신체착용부':'본체',
+           uid:'', bl:'', prevFw:'', prevDate:'', newFw:m?(m[1]+'.'+m[2]+'.'+m[3]):'', file:fwName||'', size:'', crc:'', go:'',
+           worker:$('worker').value.trim(), ver:PAGE_VER }; }
+function fwRecEnd(rec){ fwQ.push(rec); cdStore();
+  try{ localStorage.setItem('cura_iris_worker', $('worker').value.trim()); }catch(e){}
+  cdFlush(); }
+async function cdFlush(){
+  if(!cd.token || cdBusy || !fwQ.length){ cdShow(); return; }
+  cdBusy=true; cdShow('', '클라우드로 보내는 중… ('+fwQ.length+'건)');
+  let added=0, err='';
+  while(fwQ.length){ const part=fwQ.slice(0,200);
+    const r=await cdCall({act:'fwsave', token:cd.token, rows:part});
+    if(!r.ok){ err=r.err||'저장 실패'; break; }
+    added+=r.added; const done=new Set(part.map(x=>x.id)); fwQ=fwQ.filter(x=>!done.has(x.id)); cdStore(); }
+  cdBusy=false;
+  if(err){ if(/등록되지 않은|차단된/.test(err)){ cd.token=''; cdStore(); }
+    log('클라우드 기록 실패: '+err); cdShow('ng','✖ 업데이트 기록 저장 실패 — '+h(err)+(fwQ.length?' · 미전송 '+fwQ.length+'건 보관':'')); }
+  else cdShow('ok','✔ 업데이트 기록 저장 완료 — '+added+'건 (구글 시트 IRIS펌웨어)'); }
+
+function cgShow(){ $('cgErr').textContent=''; $('cgPw').value=''; $('cgate').hidden=false; setTimeout(()=>$('cgPw').focus(),50); }
+async function cgLogin(){ const pw=$('cgPw').value; if(!pw){ $('cgErr').textContent='비밀번호를 넣으세요'; return; }
+  $('cgOk').disabled=true; $('cgErr').textContent='확인 중…';
+  const dev=autoDevName(), r=await cdCall({act:'login', device:dev, pw});
+  $('cgOk').disabled=false; $('cgPw').value='';                    // 비밀번호는 남기지 않는다
+  if(!r.ok){ $('cgErr').textContent=r.err||'로그인 실패'; return; }
+  cd={url:cdUrl(), token:r.token, device:String(r.device||dev).replace(/[<>&"']/g,'')}; cdStore();
+  $('cgate').hidden=true; cdShow('ok','✔ 로그인됨 — 업데이트 기록이 자동 저장됩니다'); cdFlush(); }
+$('btnCdLogin').addEventListener('click', cgShow);
+$('btnCdOff').addEventListener('click', ()=>{ cd={url:cd.url,token:'',device:''}; cdStore(); cdShow(); });
+$('cgOk').addEventListener('click', cgLogin);
+$('cgNo').addEventListener('click', ()=>{ $('cgate').hidden=true; });
+$('cgPw').addEventListener('keydown', e=>{ if(e.key==='Enter') cgLogin(); });
+window.addEventListener('online', ()=>cdFlush());
+cdLoad(); try{ $('worker').value=localStorage.getItem('cura_iris_worker')||''; }catch(e){}
+cdShow();
+if(cd.token) cdCall({act:'ping', token:cd.token}).then(r=>{
+  if(!r.ok && /등록되지 않은|차단된/.test(r.err||'')){ cd.token=''; cdStore(); cdShow('ng','로그인이 끊겼습니다 — [로그인] 을 눌러 다시 로그인하세요'); }
+  else cdFlush(); });
 
 loadFw();
 </script>
